@@ -1,0 +1,23 @@
+[package]
+name = "universal-nft"
+version = "0.1.0"
+edition = "2021"
+description = "Solana Universal NFT Program with Cross-chain Integration via ZetaChain"
+license = "MIT"
+authors = ["Your Name <youremail@example.com>"]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+anchor-lang = "0.24.2"
+anchor-spl = "0.24.2"
+solana-program = "1.14.17"
+spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "0.1.0" }
+borsh = "0.10.3"
+common-utils = { path = "../../crates/common-utils" }
+zeta-chain-sdk = { path = "../../crates/zeta-chain-sdk" }
+
+[features]
+default = []

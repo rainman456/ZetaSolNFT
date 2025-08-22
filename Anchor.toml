@@ -1,0 +1,21 @@
+[programs.localnet]
+universal-nft = "UNiVErsaL1111111111111111111111111111111111"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+localnet = "scripts/localnet.sh"
+
+[test]
+skip = false
+
+[workspace]
+members = [
+  "programs/universal-nft",
+  "crates/common-utils"
+]
