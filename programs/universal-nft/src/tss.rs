@@ -7,7 +7,11 @@ use anchor_lang::solana_program::{
         Secp256k1Pubkey, 
         recover_pubkey,
     },
+    compute_budget::ComputeBudgetInstruction,
 };
+
+use crate::state::constants::MAX_COMPUTE_UNITS;
+use crate::state::ErrorCode;
 
 /// Ethereum address length (20 bytes)
 pub const ETH_ADDRESS_LENGTH: usize = 20;
@@ -103,6 +107,75 @@ pub fn build_cross_chain_message(
     message
 }
 
+/// Parse a cross-chain message from ZetaChain
+pub fn parse_cross_chain_message(
+    message: &[u8],
+) -> Result<(Pubkey, String, String, u64)> {
+    // Ensure the message is long enough
+    if message.len() < 32 + 8 + 8 {
+        return Err(error!(ErrorCode::InvalidMessageFormat));
+    }
+    
+    // Extract mint (first 32 bytes)
+    let mut mint_bytes = [0u8; 32];
+    mint_bytes.copy_from_slice(&message[0..32]);
+    let mint = Pubkey::new_from_array(mint_bytes);
+    
+    // Find delimiters for strings
+    let mut pos = 32;
+    let mut next_pos = pos;
+    
+    // Find end of source chain
+    while next_pos < message.len() && message[next_pos] != 0 {
+        next_pos += 1;
+    }
+    if next_pos >= message.len() {
+        return Err(error!(ErrorCode::InvalidMessageFormat));
+    }
+    
+    // Extract source chain
+    let source_chain = std::str::from_utf8(&message[pos..next_pos])
+        .map_err(|_| error!(ErrorCode::InvalidMessageFormat))?
+        .to_string();
+    
+    // Move past null terminator
+    pos = next_pos + 1;
+    next_pos = pos;
+    
+    // Find end of destination address
+    while next_pos < message.len() && message[next_pos] != 0 {
+        next_pos += 1;
+    }
+    if next_pos >= message.len() {
+        return Err(error!(ErrorCode::InvalidMessageFormat));
+    }
+    
+    // Extract destination address
+    let destination_address = std::str::from_utf8(&message[pos..next_pos])
+        .map_err(|_| error!(ErrorCode::InvalidMessageFormat))?
+        .to_string();
+    
+    // Move past null terminator
+    pos = next_pos + 1;
+    
+    // Ensure there's enough space for nonce
+    if pos + 8 > message.len() {
+        return Err(error!(ErrorCode::InvalidMessageFormat));
+    }
+    
+    // Extract nonce
+    let mut nonce_bytes = [0u8; 8];
+    nonce_bytes.copy_from_slice(&message[pos..pos+8]);
+    let nonce = u64::from_le_bytes(nonce_bytes);
+    
+    Ok((mint, source_chain, destination_address, nonce))
+}
+
+/// Create a compute budget instruction to optimize for the maximum allowed compute units
+pub fn create_compute_budget_ix() -> anchor_lang::solana_program::instruction::Instruction {
+    ComputeBudgetInstruction::set_compute_unit_limit(MAX_COMPUTE_UNITS)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +205,32 @@ mod tests {
             message[message.len() - chain_id_bytes.len()..],
             chain_id_bytes
         );
+    }
+    
+    #[test]
+    fn test_message_parsing() {
+        let mint = Pubkey::new_unique();
+        let source = "ethereum";
+        let destination = "0x1234567890123456789012345678901234567890";
+        let nonce = 123456789;
+        
+        // Build a test message
+        let mut message = Vec::new();
+        message.extend_from_slice(&mint.to_bytes());
+        message.extend_from_slice(source.as_bytes());
+        message.push(0); // Null terminator
+        message.extend_from_slice(destination.as_bytes());
+        message.push(0); // Null terminator
+        message.extend_from_slice(&nonce.to_le_bytes());
+        
+        // Parse the message
+        let result = parse_cross_chain_message(&message);
+        assert!(result.is_ok());
+        
+        let (parsed_mint, parsed_source, parsed_destination, parsed_nonce) = result.unwrap();
+        assert_eq!(parsed_mint, mint);
+        assert_eq!(parsed_source, source);
+        assert_eq!(parsed_destination, destination);
+        assert_eq!(parsed_nonce, nonce);
     }
 }
