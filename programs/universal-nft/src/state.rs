@@ -43,6 +43,7 @@ pub struct CrossChainState {
     pub nonce: u64,
     pub status: u8,        // 0: Pending, 1: Completed, 2: Failed
     pub timestamp: i64,
+    pub processed: bool,   // Flag to prevent replay attacks
 }
 
 // Constants for the program
@@ -51,6 +52,11 @@ pub mod constants {
     pub const META_SEED: &[u8] = b"meta";
     pub const NFT_SEED: &[u8] = b"nft";
     pub const CROSS_CHAIN_SEED: &[u8] = b"cross_chain";
+    pub const CONFIG_SEED: &[u8] = b"config";
+    pub const NONCE_SEED: &[u8] = b"nonce";
+    
+    // Compute budget constants
+    pub const MAX_COMPUTE_UNITS: u32 = 200_000;
     
     // Gateway PDAs
     pub const GATEWAY_META_ADDRESS: &str = "2f9SLuUNb7TNeM6gzBwT4ZjbL5ZyKzzHg1Ce9yiquEjj";
@@ -92,4 +98,10 @@ pub enum ErrorCode {
     
     #[msg("Compute budget exceeded")]
     ComputeBudgetExceeded,
+    
+    #[msg("Invalid message format")]
+    InvalidMessageFormat,
+    
+    #[msg("Invalid chain ID")]
+    InvalidChainId,
 }
