@@ -1,21 +1,19 @@
+[features]
+seeds = false
+skip-lint = false
+
 [programs.localnet]
-universal-nft = "UNiVErsaL1111111111111111111111111111111111"
+universal_nft = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+
+[programs.devnet]
+universal_nft = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 
 [registry]
-url = "https://anchor.projectserum.com"
+url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-localnet = "scripts/localnet.sh"
-
-[test]
-skip = false
-
-[workspace]
-members = [
-  "programs/universal-nft",
-  "crates/common-utils"
-]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
